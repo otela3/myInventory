@@ -1,6 +1,7 @@
 package com.satrken.myinventory;
 
 
+import android.content.DialogInterface;
 import android.provider.ContactsContract;
 import android.util.Log;
 import android.content.Intent;
@@ -22,6 +23,7 @@ import com.google.zxing.integration.android.IntentResult;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.view.View;
@@ -32,6 +34,7 @@ import android.widget.Button;
 import android.widget.SearchView;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -39,13 +42,13 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity  implements AdapterView.OnItemSelectedListener, SearchView.OnQueryTextListener {
 
+private SearchView searchView;
 private TextView barCode;
 private FirebaseFirestore db = FirebaseFirestore.getInstance();
 private CollectionReference inventarioRef = db.collection("inventario");
 private Spinner spinner;
 private IntentResult result;
 private Button btnAdd;
-private SearchView searchView;
 private  final static String[] zone = {"vin","carga exterior","carga nula","jaula","jaula con problemas","otras regiones","parciales","rechazados","swiss nature","carga con problemas"};
 
 
@@ -106,6 +109,10 @@ private  final static String[] zone = {"vin","carga exterior","carga nula","jaul
                 //atomically add a new of to the parciales array fild
 
                 parciales.update("OF", FieldValue.arrayUnion(result.getContents()));
+                CharSequence text = "OF añadida a " + zona;
+                int duration = Toast.LENGTH_SHORT;
+                Toast toast = Toast.makeText(getBaseContext(),text,duration);
+                toast.show();
             }
         });
 
@@ -118,39 +125,56 @@ private  final static String[] zone = {"vin","carga exterior","carga nula","jaul
 
     @Override
     public boolean onQueryTextSubmit(String query) {
-        inventarioRef.whereArrayContains("OF", query).get()
-                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                    @Override
-                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                        String data = "";
-                        if (inventarioRef == null) {
+        inventarioRef.whereArrayContains("OF", query).get().addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+            @Override
+            public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                if (queryDocumentSnapshots != null){
+                    String data = "";
+                    for (QueryDocumentSnapshot documentSnapshot: queryDocumentSnapshots) {
+                        Ofs ofs = documentSnapshot.toObject(Ofs.class);
+                        ofs.setDocumentId(documentSnapshot.getId());
 
-                            for (QueryDocumentSnapshot documentSnapshot : queryDocumentSnapshots) {
-                                Ofs ofs = documentSnapshot.toObject(Ofs.class);
-                                ofs.setDocumentId(documentSnapshot.getId());
-
-                                String documentId = ofs.getDocumentId();
-                                data += "ID: " + documentId;
-
-                                for (String of : ofs.getOf()) {
-                                    data += "\n-" + of;
-                                }
-
-                                data += "\n\n";
-                            }
-                            barCode.setText(data);
-                        }else{
-                            barCode.setText("error null reference");
+                        String documentId = ofs.getDocumentId();
+                        data += documentId;
+/*
+                        for (String orden : ofs.getOf()) {
+                            data += "\n-" + orden;
                         }
+ */
+                        data += "\n\n";
                     }
-                });
+                    //barCode.setText(data);
+                    AlertDialog.Builder alerta = new AlertDialog.Builder(MainActivity.this);
+                    String finalData = data;
+                    alerta.setMessage(query + "\n" + data)
+                            .setCancelable(false)
+                            .setPositiveButton("remove", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
 
+                                }
+                            })
+                            .setNegativeButton("cancel", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.cancel();
+                                }
+                            });
+                    AlertDialog titulo = alerta.create();
+                    titulo.setTitle("search");
+                    titulo.show();
+                }else {
+                    barCode.setText("error null reference");
+                }
+            }
+        });
 
         return false;
     }
 
     @Override
     public boolean onQueryTextChange(String newText) {
+
         return false;
     }
 /*
