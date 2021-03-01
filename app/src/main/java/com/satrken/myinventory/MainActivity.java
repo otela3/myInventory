@@ -141,7 +141,7 @@ private  final static String[] zone = {"vin","carga exterior","carga nula","jaul
                             data += "\n-" + orden;
                         }
  */
-                        data += "\n\n";
+                        //data += "\n\n";
                     }
                     //barCode.setText(data);
                     AlertDialog.Builder alerta = new AlertDialog.Builder(MainActivity.this);
@@ -151,6 +151,7 @@ private  final static String[] zone = {"vin","carga exterior","carga nula","jaul
                             .setPositiveButton("remove", new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
+                                    inventarioRef.document(finalData).update("OF",FieldValue.arrayRemove(query));
 
                                 }
                             })
